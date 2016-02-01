@@ -1,21 +1,37 @@
-> ![MikroE](http://www.mikroe.com/img/designs/beta/logo_small.png)
-> #[7x10 R click](http://www.mikroe.com/click/7x10-r/)#
-> ##By [MikroElektronika](http://www.mikroe.com)
----
-
-## Installation
-Use the [package manager](http://www.mikroe.com/package-manager/) to install the library for your architecture.
-
-###Example
-```
+/*******************************************************************************
+* Title                 :   7x10R click Example
+* Filename              :   led7x10_click.c
+* Author                :   RBL
+* Origin Date           :   10/11/2015
+* Notes                 :   None
+*******************************************************************************/
+/*************** MODULE REVISION LOG ******************************************
+*
+*    Date    Software Version    Initials   Description 
+*  10/11/16         .1              RBL      Module Created.
+*
+*******************************************************************************/
+/** 
+ * @file led7x10_click.c
+ * @brief Example of multiplexed 7 x 10 led matrix control 
+ */
+/******************************************************************************
+* Includes
+*******************************************************************************/
 #include <stdint.h>
 #include "s7x10r_hw.h"
 
-sbit SxT_CS at GPIOD_ODR.B13;
-sbit SxT_RST at GPIOC_ODR.B2;
-sbit SxT_ROW_RST at GPIOA_ODR.B0;
-sbit SxT_ROW_CLK at GPIOA_ODR.B4;
+/******************************************************************************
+* Module Preprocessor Constants
+*******************************************************************************/
 
+/******************************************************************************
+* Module Preprocessor Macros
+*******************************************************************************/
+
+/******************************************************************************
+* Module Typedefs
+*******************************************************************************/
 enum
 {
     TEST_STAGE1,
@@ -24,6 +40,17 @@ enum
     TEST_STAGE4
 };
 
+/******************************************************************************
+* Module Variable Definitions
+*******************************************************************************/
+sbit SxT_CS at GPIOD_ODR.B13;
+sbit SxT_RST at GPIOC_ODR.B2;
+sbit SxT_ROW_RST at GPIOA_ODR.B0;
+sbit SxT_ROW_CLK at GPIOA_ODR.B4;
+
+/******************************************************************************
+* Function Prototypes
+*******************************************************************************/
 void system_init( void );
 void test1_pixels( void );
 void test2_text( void );
@@ -31,13 +58,16 @@ void test3_scrolling( void );
 void test4_numbers( void );
 void init_timer2( void );
 
-//Timer2 Prescaler :599; Preload = 62499; Actual Interrupt Time = 100 ms
+/******************************************************************************
+* Function Definitions
+*******************************************************************************/
+//Timer2 Prescaler :599; Preload = 62499; Actual Interrupt Time = 50 ms
 void init_timer2()
 {
     RCC_APB1ENR.TIM2EN = 1;
     TIM2_CR1.CEN = 0;
-    TIM2_PSC = 239;
-    TIM2_ARR = 62499;
+    TIM2_PSC = 19;
+    TIM2_ARR = 59999;
     NVIC_IntEnable(IVT_INT_TIM2);
     TIM2_DIER.UIE = 1;
     TIM2_CR1.CEN = 1;
@@ -85,8 +115,8 @@ void test2_text()
 
 void test3_scrolling()
 {
-    s7x10r_draw_txt( "MikroElektronika" );
-    s7x10r_scroll_enable( S7X10R_MED );
+    s7x10r_draw_txt( "  Mikro Elektronika  . Happy" );
+    s7x10r_scroll_enable( S7X10R_FAST );
 }
 
 void test4_numbers()
@@ -105,14 +135,16 @@ void main()
 {
     uint16_t counter = 0;
     uint16_t test_counter = 0;
-    uint16_t stage = TEST_STAGE1;
+    int stage = TEST_STAGE1;
     uint8_t called = 0;
 
     system_init();
     s7x10r_clear_display();
 
+
     while( 1 )
     {
+
         if( !( counter % 20 ) )
         {
             if( test_counter >= 100 )
@@ -151,15 +183,17 @@ void main()
 
             test_counter++;
         }
-
+        
         s7x10r_display();
         counter++;
     }
 }
 
-void Timer2_interrupt() iv IVT_INT_TIM2
+void timer2_interrupt() iv IVT_INT_TIM2
 {
     TIM2_SR.UIF = 0;
     s7x10r_tick();
 }
-```
+
+/*************** END OF FUNCTIONS ***************************************************************************/
+
