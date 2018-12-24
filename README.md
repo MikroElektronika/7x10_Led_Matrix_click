@@ -1,165 +1,133 @@
-> ![MikroE](http://www.mikroe.com/img/designs/beta/logo_small.png)
-> #[7x10 R click](http://www.mikroe.com/click/7x10-r/)#
-> ##By [MikroElektronika](http://www.mikroe.com)
+![MikroE](http://www.mikroe.com/img/designs/beta/logo_small.png)
+
 ---
 
-## Installation
-Use the [package manager](http://www.mikroe.com/package-manager/) to install the library for your architecture.
+# 7x10_R Click
 
-###Example
-```
-#include <stdint.h>
-#include "s7x10r_hw.h"
+- **CIC Prefix**  : C7X10R
+- **Author**      : Katarina Perendic
+- **Verison**     : 1.0.0
+- **Date**        : Jan 2018.
 
-sbit SxT_CS at GPIOD_ODR.B13;
-sbit SxT_RST at GPIOC_ODR.B2;
-sbit SxT_ROW_RST at GPIOA_ODR.B0;
-sbit SxT_ROW_CLK at GPIOA_ODR.B4;
+---
 
-enum
+### Software Support
+
+We provide a library for the 7x10_R Click on our [LibStock](https://libstock.mikroe.com/projects/view/1582/7x10-r-click) 
+page, as well as a demo application (example), developed using MikroElektronika 
+[compilers](http://shop.mikroe.com/compilers). The demo can run on all the main 
+MikroElektronika [development boards](http://shop.mikroe.com/development-boards).
+
+**Library Description**
+
+The library carries all functions necessary for complete control over the 7x10 R click. 
+There is also an additional font header file which carries 5x7 letter definitions.
+
+Key functions :
+
+- ``` void c7x10r_drawPixel( uint8_t row, uint8_t col ) ``` - Draws a pixel
+- ``` void c7x10r_drawText( char *txt ) ``` - Write Text
+- ``` void c7x10r_drawNumber( uint8_t num ) ``` - Draws numbers
+
+**Examples Description**
+
+The application is composed of three sections :
+
+- System Initialization - GPIO and SPI bus initialization
+- Application Initialization - Driver initialization
+- Application Task - (code snippet)
+  1. Text scrolling
+  2. Counts from 0 to 10
+  3. Displays random pixels
+
+
+```.c
+void applicationTask()
 {
-    TEST_STAGE1,
-    TEST_STAGE2,
-    TEST_STAGE3,
-    TEST_STAGE4
-};
+    uint8_t i;
+    uint8_t j;
+    uint8_t endOp;
 
-void system_init( void );
-void test1_pixels( void );
-void test2_text( void );
-void test3_scrolling( void );
-void test4_numbers( void );
-void init_timer2( void );
-
-//Timer2 Prescaler :599; Preload = 62499; Actual Interrupt Time = 100 ms
-void init_timer2()
-{
-    RCC_APB1ENR.TIM2EN = 1;
-    TIM2_CR1.CEN = 0;
-    TIM2_PSC = 239;
-    TIM2_ARR = 62499;
-    NVIC_IntEnable(IVT_INT_TIM2);
-    TIM2_DIER.UIE = 1;
-    TIM2_CR1.CEN = 1;
-}
-
-void system_init()
-{
-    GPIO_Digital_Output(&GPIOD_ODR, _GPIO_PINMASK_13);   // Set CS pin as output
-    GPIO_Digital_Output(&GPIOC_ODR, _GPIO_PINMASK_2);    // Set RST pin as output
-    GPIO_Digital_Output(&GPIOA_ODR, _GPIO_PINMASK_0);    // Set PWM pin as output
-    GPIO_Digital_Output(&GPIOA_ODR, _GPIO_PINMASK_4);    // Set PWM pin as output
-
-    // Initialize SPI
-    SPI3_Init_Advanced( _SPI_FPCLK_DIV16, _SPI_MASTER | _SPI_8_BIT |
-                        _SPI_CLK_IDLE_LOW | _SPI_FIRST_CLK_EDGE_TRANSITION |
-                        _SPI_MSB_FIRST | _SPI_SS_DISABLE | _SPI_SSM_ENABLE |
-                        _SPI_SSI_1, &_GPIO_MODULE_SPI3_PC10_11_12);
-
-    s7x10r_init();
-    init_timer2();
-    EnableInterrupts();
-}
-
-void test1_pixels()
-{
-    static uint8_t x = 1, y = 0;
-    s7x10r_clear_display();
-
-    if( y++ > 10 )
+// SCROLL PROCEDURE
+    endOp = 1;
+    c7x10r_drawText( &mikroe_txt[0] );
+    c7x10r_scrollEnable( _C7X10R_SPEED_MED );
+    while (0 != endOp)
     {
-        y = 1;
-        x++;
+        endOp = c7x10r_refreshDisplay();
+        c7x10r_tick();
+        Delay_ms( 1 );
+
     }
+    c7x10r_scrollDisable();
+    c7x10r_clearDisplay();
 
-    if( x >= 8 )
-        x = 1;
-
-    s7x10r_draw_pix( x, y );
-}
-
-void test2_text()
-{
-    s7x10r_draw_txt( "MikroElektronika" );
-}
-
-void test3_scrolling()
-{
-    s7x10r_draw_txt( "MikroElektronika" );
-    s7x10r_scroll_enable( S7X10R_MED );
-}
-
-void test4_numbers()
-{
-    static uint8_t num;
-
-    s7x10r_clear_display();
-    s7x10r_draw_num( num );
-    num++;
-
-    if( num > 99 )
-        num = 0;
-}
-
-void main()
-{
-    uint16_t counter = 0;
-    uint16_t test_counter = 0;
-    uint16_t stage = TEST_STAGE1;
-    uint8_t called = 0;
-
-    system_init();
-    s7x10r_clear_display();
-
-    while( 1 )
+// COUNTER PROCEDURE
+    for (i = 0; i < 11; i++)
     {
-        if( !( counter % 20 ) )
+        c7x10r_clearDisplay();
+        c7x10r_drawNumber( i );
+
+        for (j = 0; j < 30; ++j)
         {
-            if( test_counter >= 100 )
-            {
-                stage++;
-                s7x10r_scroll_disable();
-
-                if( stage > TEST_STAGE4 )
-                {
-                    stage = TEST_STAGE1;
-                    called = 0;
-                }
-
-                test_counter = 0;
-            }
-
-            switch( stage )
-            {
-            case TEST_STAGE1:
-                test1_pixels();
-                break;
-            case TEST_STAGE2:
-                test2_text();
-                break;
-            case TEST_STAGE3:
-                if( !called )
-                {
-                    test3_scrolling();
-                    called = 1;
-                }
-                break;
-            case TEST_STAGE4:
-                test4_numbers();
-                break;
-            }
-
-            test_counter++;
+            c7x10r_refreshDisplay();
+            Delay_ms( 1 );
         }
-
-        s7x10r_display();
-        counter++;
     }
-}
+    c7x10r_clearDisplay();
 
-void Timer2_interrupt() iv IVT_INT_TIM2
-{
-    TIM2_SR.UIF = 0;
-    s7x10r_tick();
+// PIXELS PROCEDURE
+    c7x10r_drawPixel( 2, 3 );
+    c7x10r_drawPixel( 2, 8 );
+    c7x10r_drawPixel( 6, 3 );
+    c7x10r_drawPixel( 6, 8 );
+    for (i = 0; i < 255; i++)
+    {
+        c7x10r_refreshDisplay();
+        Delay_ms( 1 );
+    }
+    c7x10r_clearDisplay();
 }
 ```
+
+The full application code, and ready to use projects can be found on our 
+[LibStock](https://libstock.mikroe.com/projects/view/1582/7x10-r-click) page.
+
+Other mikroE Libraries used in the example:
+
+- SPI
+
+**Additional notes and informations**
+
+Depending on the development board you are using, you may need 
+[USB UART click](http://shop.mikroe.com/usb-uart-click), 
+[USB UART 2 Click](http://shop.mikroe.com/usb-uart-2-click) or 
+[RS232 Click](http://shop.mikroe.com/rs232-click) to connect to your PC, for 
+development systems with no UART to USB interface available on the board. The 
+terminal available in all Mikroelektronika 
+[compilers](http://shop.mikroe.com/compilers), or any other terminal application 
+of your choice, can be used to read the message.
+
+---
+### Architectures Supported
+
+#### mikroC
+
+| STM | KIN | CEC | MSP | TIVA | PIC | PIC32 | DSPIC | AVR | FT90x |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| x | x | x | x | x | x | x | x | x | x |
+
+#### mikroBasic
+
+| STM | KIN | CEC | MSP | TIVA | PIC | PIC32 | DSPIC | AVR | FT90x |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| x | x | x | x | x | x | x | x | x | x |
+
+#### mikroPascal
+
+| STM | KIN | CEC | MSP | TIVA | PIC | PIC32 | DSPIC | AVR | FT90x |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| x | x | x | x | x | x | x | x | x | x |
+
+---
+---
